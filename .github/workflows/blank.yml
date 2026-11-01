@@ -11,6 +11,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: باز کردن zip پروژه (اگر فایل‌ها داخل zip آپلود شده‌اند)
+        run: |
+          if [ ! -f pubspec.yaml ]; then
+            unzip -q scanwriter.zip -d _unz
+            cp -r _unz/scanwriter/. .
+            rm -rf _unz
+          fi
+          ls -A
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
