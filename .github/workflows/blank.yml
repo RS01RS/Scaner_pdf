@@ -42,13 +42,31 @@ jobs:
             rm -rf _gen
           fi
           python3 tool/patch_android.py
+          # افزونه‌ی Tesseract حداقل اندروید ۷ (API 24) می‌خواهد
+          sed -i -E 's/minSdkVersion[[:space:]]+flutter\.minSdkVersion/minSdkVersion 24/; s/minSdk[[:space:]]*=[[:space:]]*flutter\.minSdkVersion/minSdk = 24/' android/app/build.gradle* || true
+          grep -n "minSdk" android/app/build.gradle* || true
           python3 -m pip install pillow || python3 -m pip install --break-system-packages pillow
           python3 tool/make_icon.py
 
       - run: flutter pub get
 
+      - name: تحلیل کد (خطاهای Dart)
+        shell: bash
+        continue-on-error: true
+        run: flutter analyze --no-pub 2>&1 | tee analyze.log
+
       - name: ساخت APK
-        run: flutter build apk --release --split-per-abi
+        shell: bash
+        run: flutter build apk --release --split-per-abi 2>&1 | tee build.log
+
+      - name: خلاصه‌ی خطا (اگر ساخت شکست خورد این مرحله را باز کنید)
+        if: failure()
+        shell: bash
+        run: |
+          echo "===== خطاهای تحلیل کد ====="
+          grep -E "^\s*error" analyze.log | head -40 || true
+          echo "===== خطاهای ساخت ====="
+          grep -n -E "Error:|error:|What went wrong|Execution failed|Could not|Manifest merger|minSdk|Namespace|FAILURE" -A4 build.log | head -80 || true
 
       - uses: actions/upload-artifact@v4
         with:
